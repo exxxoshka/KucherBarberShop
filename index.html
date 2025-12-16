@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вход | Парикмахер</title>
+    <title>Вход | Парикмахерская</title>
     
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -13,93 +13,345 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     
-    <!-- Наши скрипты -->
-    <script src="firebase-config.js"></script>
-    <script src="auth.js" defer></script>
-    
     <style>
+        :root {
+            --primary: #6a11cb;
+            --secondary: #2575fc;
+        }
+        
         body {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
-            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .login-box {
-            background: white;
-            border-radius: 15px;
-            padding: 40px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            max-width: 500px;
+        
+        .login-container {
+            max-width: 450px;
             margin: 0 auto;
         }
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+        
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.1);
         }
-        .btn-group button {
-            flex: 1;
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo-icon {
+            font-size: 3.5rem;
+            
+            -webkit-background-clip: text;
+          
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 0.25rem rgba(106, 17, 203, 0.25);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            padding: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(106, 17, 203, 0.3);
+        }
+        
+        .btn-outline-primary {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .btn-outline-primary:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .guest-section {
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .guest-card {
+            background: linear-gradient(135deg, rgba(32, 201, 151, 0.1), rgba(40, 167, 69, 0.1));
+            border: 1px solid rgba(32, 201, 151, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+        }
+        
+        .test-data {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .login-card {
+                padding: 30px 20px;
+                margin: 20px;
+            }
+            
+            body {
+                padding: 20px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="login-box">
-            <h1 class="text-center mb-4">💈 Личный кабинет парикмахера</h1>
-            
-            <div class="btn-group" role="group">
-                <button type="button" class="btn btn-primary active" id="btnLogin">Вход</button>
-                <button type="button" class="btn btn-outline-primary" id="btnRegister">Регистрация</button>
+        <div class="login-container">
+            <div class="login-card">
+                <!-- Логотип -->
+                <div class="logo">
+                    <div class="logo-icon">💈</div>
+                    <h2 class="h3 mb-1">Парикмахерская</h2>
+                    <p class="text-muted">Вход для администраторов</p>
+                </div>
+                
+                <!-- Форма входа/регистрации -->
+                <form id="authForm">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" id="email" class="form-control" 
+                               placeholder="example@mail.ru" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Пароль</label>
+                        <input type="password" id="password" class="form-control" 
+                               placeholder="Минимум 6 символов" required minlength="6">
+                    </div>
+                    
+                    <div class="d-grid gap-2 mb-3">
+                        <button type="submit" class="btn btn-primary" id="loginBtn">
+                            Войти
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="registerBtn">
+                            Зарегистрироваться
+                        </button>
+                    </div>
+                    
+                    <div id="authMessage"></div>
+                </form>
+                
+                <!-- Разделитель -->
+                <div class="position-relative my-4">
+                    <hr>
+                    <div class="position-absolute top-50 start-50 translate-middle bg-white px-3">
+                        <span class="text-muted">или</span>
+                    </div>
+                </div>
+                
+                <!-- Блок для клиентов (ТЕПЕРЬ ПОД ФОРМОЙ) -->
+                <div class="guest-section">
+                    <div class="guest-card">
+                        <h5 class="text-center mb-3">👤 Я клиент</h5>
+                        <p class="text-center text-muted mb-3">
+                            Хочу записаться на стрижку без регистрации
+                        </p>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="booking.html" class="btn btn-success">
+                                📝 Записаться онлайн
+                            </a>
+                            <a href="client-view.html" class="btn btn-outline-success">
+                                🔍 Проверить свои записи
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Тестовые данные -->
+                    <div class="test-data mt-4">
+                        <h6 class="mb-2">🎯 Тестовые данные:</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <small><strong>Для входа админа:</strong></small><br>
+                                <small><code>test@mail.ru</code><br>
+                                <code>123456</code></small>
+                            </div>
+                            <div class="col-md-6">
+                                <small><strong>Для проверки записей:</strong></small><br>
+                                <small>Телефон: <code>+7 (999) 123-45-67</code></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
-            <!-- Форма входа -->
-            <form id="loginForm">
-                <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <input type="email" id="email" class="form-control" placeholder="example@mail.ru" required>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Пароль</label>
-                    <input type="password" id="password" class="form-control" placeholder="Минимум 6 символов" required minlength="6">
-                </div>
-                
-                <button type="submit" class="btn btn-primary w-100">Войти</button>
-            </form>
-            
-            <!-- Форма регистрации (скрыта по умолчанию) -->
-            <form id="registerForm" style="display: none;">
-                <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <input type="email" id="regEmail" class="form-control" placeholder="example@mail.ru" required>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Пароль</label>
-                    <input type="password" id="regPassword" class="form-control" placeholder="Минимум 6 символов" required minlength="6">
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Повторите пароль</label>
-                    <input type="password" id="regConfirm" class="form-control" placeholder="Повторите пароль" required>
-                </div>
-                
-                <button type="submit" class="btn btn-success w-100">Зарегистрироваться</button>
-            </form>
-            
-            <!-- Сообщения -->
-            <div id="message" class="mt-3"></div>
         </div>
     </div>
-    <!-- В конец index.html перед закрывающим </body> -->
-<div class="text-center mt-4">
-    <p class="text-muted">
-        Хотите записаться как клиент? 
-        <a href="booking.html" class="text-decoration-none">
-            Перейти к записи на стрижку →
-        </a>
-    </p>
-</div>
+
+    <!-- Firebase конфигурация -->
+    <script>
+        // Конфигурация Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDwXOEGv2GBkeWggfhcBnfKQWnHDVeI890",
+            authDomain: "barber-salon-cucher.firebaseapp.com",
+            projectId: "barber-salon-cucher",
+            storageBucket: "barber-salon-cucher.firebasestorage.app",
+            messagingSenderId: "337468108878",
+            appId: "1:337468108878:web:0fbcb5f537d891cd2ed31f"
+        };
+        
+        // Инициализация Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+    </script>
+    
+    <!-- JavaScript для авторизации -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Элементы формы
+            const authForm = document.getElementById('authForm');
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const loginBtn = document.getElementById('loginBtn');
+            const registerBtn = document.getElementById('registerBtn');
+            const authMessage = document.getElementById('authMessage');
+            
+            // Проверка авторизации
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    // Пользователь вошел - перенаправляем в личный кабинет
+                    window.location.href = 'dashboard.html';
+                }
+            });
+            
+            // Вход
+            loginBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                performLogin();
+            });
+            
+            // Регистрация
+            registerBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                performRegistration();
+            });
+            
+            // Форма отправки
+            authForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                performLogin();
+            });
+            
+            // Функция входа
+            function performLogin() {
+                const email = emailInput.value.trim();
+                const password = passwordInput.value;
+                
+                if (!validateInputs(email, password)) return;
+                
+                // Показываем загрузку
+                loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Вход...';
+                loginBtn.disabled = true;
+                
+                auth.signInWithEmailAndPassword(email, password)
+                    .then(() => {
+                        showMessage('Вход выполнен успешно!', 'success');
+                        // Перенаправление произойдет автоматически через onAuthStateChanged
+                    })
+                    .catch(error => {
+                        showMessage('Ошибка входа: ' + error.message, 'danger');
+                        loginBtn.innerHTML = 'Войти';
+                        loginBtn.disabled = false;
+                    });
+            }
+            
+            // Функция регистрации
+            function performRegistration() {
+                const email = emailInput.value.trim();
+                const password = passwordInput.value;
+                
+                if (!validateInputs(email, password)) return;
+                
+                // Показываем загрузку
+                registerBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Регистрация...';
+                registerBtn.disabled = true;
+                
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then(() => {
+                        showMessage('Регистрация успешна! Вы вошли в систему.', 'success');
+                        // Перенаправление произойдет автоматически
+                    })
+                    .catch(error => {
+                        showMessage('Ошибка регистрации: ' + error.message, 'danger');
+                        registerBtn.innerHTML = 'Зарегистрироваться';
+                        registerBtn.disabled = false;
+                    });
+            }
+            
+            // Валидация
+            function validateInputs(email, password) {
+                if (!email || !password) {
+                    showMessage('Заполните все поля', 'warning');
+                    return false;
+                }
+                
+                if (password.length < 6) {
+                    showMessage('Пароль должен быть не менее 6 символов', 'warning');
+                    return false;
+                }
+                
+                // Простая валидация email
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    showMessage('Введите корректный email', 'warning');
+                    return false;
+                }
+                
+                return true;
+            }
+            
+            // Показать сообщение
+            function showMessage(text, type) {
+                authMessage.innerHTML = `
+                    <div class="alert alert-${type} alert-dismissible fade show">
+                        ${text}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+                
+                // Автоматически скрыть через 5 секунд
+                setTimeout(() => {
+                    const alert = authMessage.querySelector('.alert');
+                    if (alert) {
+                        alert.remove();
+                    }
+                }, 5000);
+            }
+            
+            // Кнопка для быстрого заполнения тестовых данных
+            const quickTestBtn = document.createElement('button');
+            quickTestBtn.className = 'btn btn-sm btn-outline-info w-100 mt-2';
+            quickTestBtn.innerHTML = '🚀 Заполнить тестовые данные';
+            quickTestBtn.onclick = function() {
+                emailInput.value = 'test@mail.ru';
+                passwordInput.value = '123456';
+                emailInput.focus();
+            };
+            
+            document.querySelector('.test-data').appendChild(quickTestBtn);
+            
+            // Автофокус на поле email
+            emailInput.focus();
+        });
+    </script>
 </body>
 </html>
