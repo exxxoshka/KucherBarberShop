@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Запись на стрижку | Парикмахерская</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        :root {
+            --primary: #6a11cb;
+            --secondary: #2575fc;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 60px 0;
+            border-radius: 0 0 30px 30px;
+            margin-bottom: 40px;
+        }
+        
+        .booking-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .service-card {
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            transition: all 0.3s;
+            cursor: pointer;
+            height: 100%;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: 0 10px 20px rgba(106, 17, 203, 0.1);
+        }
+        
+        .service-card.selected {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(106, 17, 203, 0.05), rgba(37, 117, 252, 0.05));
+        }
+        
+        .time-slot {
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+        }
+        
+        .time-slot:hover {
+            border-color: var(--primary);
+            background: rgba(106, 17, 203, 0.05);
+        }
+        
+        .time-slot.selected {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(106, 17, 203, 0.3);
+        }
+        
+        .confirmation-box {
+            background: linear-gradient(135deg, #20c997, #28a745);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            gap: 40px;
+            position: relative;
+        }
+        
+        .step {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e9ecef;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .step.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+        
+        .step.completed {
+            background: #20c997;
+            color: white;
+        }
+        
+        .step-line {
+            position: absolute;
+            top: 20px;
+            left: 60px;
+            right: 60px;
+            height: 2px;
+            background: #e9ecef;
+            z-index: 1;
+        }
+        
+        @media (max-width: 768px) {
+            .hero-section {
+                padding: 40px 0;
+            }
+            
+            .booking-card {
+                padding: 20px;
+            }
+            
+            .step-indicator {
+                gap: 30px;
+            }
+            
+            .step {
+                width: 35px;
+                height: 35px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+        <div class="container">
+            <a class="navbar-brand" href="booking.html" style="color: var(--primary);">
+                <span>💈</span> BarberShop Kucher
+            </a>
+           
+        </div>
+    </nav>
+
+    <!-- Герой-секция -->
+    <section class="hero-section">
+        <div class="container text-center">
+            <h1 class="display-5 fw-bold mb-3">Запись на стрижку</h1>
+            <p class="lead mb-0">Выберите услугу, удобное время и забронируйте онлайн</p>
+        </div>
+    </section>
+
+    <!-- Основной контент -->
+    <div class="container">
+        <!-- Индикатор шагов -->
+        <div class="step-indicator">
+            <div class="step active" id="step1">1</div>
+            <div class="step" id="step2">2</div>
+            <div class="step" id="step3">3</div>
+            <div class="step" id="step4">4</div>
+            <div class="step-line"></div>
+        </div>
+
+        <!-- Шаг 1: Выбор услуги -->
+        <div class="booking-card" id="step1Content">
+            <h3 class="mb-4">1. Выберите услугу</h3>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="service-card" data-service="Мужская стрижка" data-price="1500">
+                        <div class="card-body text-center">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">👨</div>
+                            <h5>Мужская стрижка</h5>
+                            <p class="text-muted">Классическая или современная стрижка</p>
+                            <div class="fw-bold text-primary fs-4">1 500 ₽</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="service-card" data-service="Бритье" data-price="1000">
+                        <div class="card-body text-center">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">✂️</div>
+                            <h5>Бритье</h5>
+                            <p class="text-muted">Качественное бритье с уходом</p>
+                            <div class="fw-bold text-primary fs-4">1 000 ₽</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="service-card" data-service="Комплекс" data-price="2200">
+                        <div class="card-body text-center">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">👑</div>
+                            <h5>Комплекс</h5>
+                            <p class="text-muted">Стрижка + бритье + укладка</p>
+                            <div class="fw-bold text-primary fs-4">2 200 ₽</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <button class="btn btn-primary btn-lg" onclick="nextStep(1)">
+    Далее → Выбор времени
+</button>
+            </div>
+        </div>
+
+        <!-- Шаг 2: Выбор даты и времени -->
+        <div class="booking-card" id="step2Content" style="display: none;">
+            <h3 class="mb-4">2. Выберите дату и время</h3>
+            
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <label class="form-label fw-bold">Дата записи</label>
+                    <input type="date" id="bookingDate" class="form-control form-control-lg">
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="alert alert-primary">
+                        <strong>Выбрано:</strong>
+                        <div id="selectedServiceInfo">Не выбрано</div>
+                        <div id="selectedPriceInfo" class="fw-bold fs-5 mt-1"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label class="form-label fw-bold">Время записи</label>
+                <div class="row g-2" id="timeSlots">
+                    <!-- Время появится здесь -->
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <button class="btn btn-outline-secondary" onclick="nextStep(0)"> <!-- меняем на 0 -->
+    ← Назад
+</button>
+<button class="btn btn-primary" onclick="nextStep(2)" id="nextToStep3" disabled>
+    Далее → Ваши данные
+</button>
+            </div>
+        </div>
+
+        <!-- Шаг 3: Ввод данных -->
+        <div class="booking-card" id="step3Content" style="display: none;">
+            <h3 class="mb-4">3. Ваши данные</h3>
+            
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">ФИО *</label>
+                    <input type="text" id="clientName" class="form-control" placeholder="Иванов Иван Иванович" required>
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label">Телефон *</label>
+                    <input type="tel" id="clientPhone" class="form-control" placeholder="+7 (999) 123-45-67" required>
+                </div>
+                
+                <div class="col-12">
+                    <label class="form-label">Email (необязательно)</label>
+                    <input type="email" id="clientEmail" class="form-control" placeholder="example@mail.ru">
+                </div>
+                
+                <div class="col-12">
+                    <label class="form-label">Комментарий (необязательно)</label>
+                    <textarea id="clientComment" class="form-control" rows="3" placeholder="Особые пожелания..."></textarea>
+                </div>
+            </div>
+            
+            <div class="confirmation-box" id="bookingSummary" style="display: none;">
+                <h5>📋 Ваша запись</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Услуга:</strong> <span id="summaryService"></span></p>
+                        <p><strong>Дата:</strong> <span id="summaryDate"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Время:</strong> <span id="summaryTime"></span></p>
+                        <p><strong>Цена:</strong> <span id="summaryPrice"></span></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between mt-4">
+                <button class="btn btn-outline-secondary" onclick="nextStep(1)"> <!-- меняем на 1 -->
+    ← Назад
+</button>
+
+                <button class="btn btn-primary" onclick="submitBooking()" id="submitBtn">
+                    ✅ Записаться
+                </button>
+            </div>
+        </div>
+
+        <!-- Шаг 4: Подтверждение -->
+        <div class="booking-card text-center" id="step4Content" style="display: none;">
+            <div style="font-size: 4rem; color: #28a745; margin-bottom: 1rem;">✅</div>
+            <h3 class="mb-3">Запись подтверждена!</h3>
+            <p class="lead mb-4">Мы ждём вас в назначенное время.</p>
+            
+            <div class="card border-success mx-auto" style="max-width: 500px;">
+                <div class="card-body text-start">
+                    <h5 class="card-title">Детали записи</h5>
+                    <p><strong>Клиент:</strong> <span id="confirmName"></span></p>
+                    <p><strong>Телефон:</strong> <span id="confirmPhone"></span></p>
+                    <p><strong>Услуга:</strong> <span id="confirmService"></span></p>
+                    <p><strong>Дата и время:</strong> <span id="confirmDateTime"></span></p>
+                    <p><strong>Цена:</strong> <span id="confirmPrice"></span></p>
+                    <p><strong>Номер записи:</strong> <span id="confirmId" class="badge bg-primary"></span></p>
+                </div>
+            </div>
+            
+            <div class="alert alert-info mt-4">
+                <strong>📱 Сохраните номер записи!</strong> Он понадобится для связи.
+            </div>
+            
+            <div class="mt-4">
+                <button class="btn btn-primary" onclick="newBooking()">
+                    🆕 Новая запись
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Футер -->
+    <footer class="bg-dark text-white mt-5 py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>💈 BarberShop</h5>
+                    <p>Профессиональные стрижки и бритье</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p>📞 +7 (999) 123-45-67</p>
+                    <p>📍 ул. Примерная, 123</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // ===== КОНФИГУРАЦИЯ FIREBASE =====
+        const firebaseConfig = {
+            apiKey: "AIzaSyDwXOEGv2GBkeWggfhcBnfKQWnHDVeI890",
+            authDomain: "barber-salon-cucher.firebaseapp.com",
+            projectId: "barber-salon-cucher",
+            storageBucket: "barber-salon-cucher.firebasestorage.app",
+            messagingSenderId: "337468108878",
+            appId: "1:337468108878:web:0fbcb5f537d891cd2ed31f"
+        };
+        
+        // Инициализация Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        // ===== ПЕРЕМЕННЫЕ =====
+        let bookingData = {
+            service: null,
+            price: null,
+            date: null,
+            time: null,
+            id: null
+        };
+        
+        const timeSlots = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
+        
+        // ===== ИНИЦИАЛИЗАЦИЯ =====
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Страница загружена');
+            
+            // Установим дату (завтра)
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('bookingDate').value = tomorrow.toISOString().split('T')[0];
+            bookingData.date = tomorrow.toISOString().split('T')[0];
+            
+            // Выбор услуги
+            document.querySelectorAll('.service-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    document.querySelectorAll('.service-card').forEach(c => {
+                        c.classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                    
+                    bookingData.service = this.dataset.service;
+                    bookingData.price = this.dataset.price;
+                    
+                    console.log('Выбрана услуга:', bookingData.service, bookingData.price);
+                });
+            });
+            
+            // Маска телефона
+            document.getElementById('clientPhone').addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 1) {
+                    value = '+7 (' + value.substring(1, 4) + ') ' + 
+                            value.substring(4, 7) + '-' + 
+                            value.substring(7, 9) + '-' + 
+                            value.substring(9, 11);
+                }
+                e.target.value = value.substring(0, 18);
+            });
+            
+            // При изменении даты
+            document.getElementById('bookingDate').addEventListener('change', function() {
+                bookingData.date = this.value;
+                generateTimeSlots();
+                updateSummary();
+            });
+            
+            // Генерируем время
+            generateTimeSlots();
+        });
+        
+        // ===== ФУНКЦИИ ШАГОВ =====
+        window.nextStep = function(currentStep) {
+    // Проверки
+    if (currentStep === 1 && !bookingData.service) {
+        alert('Выберите услугу!');
+        return;
+    }
+    
+    if (currentStep === 2 && !bookingData.time) {
+        alert('Выберите время!');
+        return;
+    }
+    
+    // Скрыть все шаги
+    for (let i = 1; i <= 4; i++) {
+        const stepEl = document.getElementById(`step${i}Content`);
+        if (stepEl) {
+            stepEl.style.display = 'none';
+        }
+    }
+    
+    // Показать следующий шаг
+    const nextStepNum = currentStep + 1;
+    const nextEl = document.getElementById(`step${nextStepNum}Content`);
+    if (nextEl) {
+        nextEl.style.display = 'block';
+    }
+    
+    // Обновить индикатор
+    for (let i = 1; i <= 4; i++) {
+        const indicator = document.getElementById(`step${i}`);
+        if (indicator) {
+            indicator.classList.remove('active', 'completed');
+            if (i < nextStepNum) {
+                indicator.classList.add('completed');
+            } else if (i === nextStepNum) {
+                indicator.classList.add('active');
+            }
+        }
+    }
+    
+    // Дополнительные действия
+    if (nextStepNum === 2) {
+        // Обновить информацию об услуге
+        const serviceInfo = document.getElementById('selectedServiceInfo');
+        const priceInfo = document.getElementById('selectedPriceInfo');
+        if (serviceInfo && priceInfo) {
+            serviceInfo.textContent = bookingData.service || 'Не выбрано';
+            priceInfo.textContent = bookingData.price ? bookingData.price + ' ₽' : '';
+        }
+        
+        // Обновить слоты времени
+        generateTimeSlots();
+    }
+    
+    if (nextStepNum === 3) {
+        updateSummary();
+    }
+};
+        
+        function prevStep(currentStep) {
+            const prevStep = currentStep - 1;
+            
+            document.querySelectorAll('[id$="Content"]').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            document.getElementById(`step${prevStep}Content`).style.display = 'block';
+            updateStepIndicator(prevStep);
+        }
+        
+        function updateStepIndicator(step) {
+            // Сбрасываем все шаги
+            document.querySelectorAll('.step').forEach(el => {
+                el.classList.remove('active', 'completed');
+            });
+            
+            // Устанавливаем активные/завершенные
+            for (let i = 1; i <= 4; i++) {
+                const stepEl = document.getElementById(`step${i}`);
+                if (i < step) {
+                    stepEl.classList.add('completed');
+                } else if (i === step) {
+                    stepEl.classList.add('active');
+                }
+            }
+        }
+        
+        // ===== ВРЕМЕННЫЕ СЛОТЫ =====
+        function generateTimeSlots() {
+            const container = document.getElementById('timeSlots');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            // Для демо - случайные занятые слоты
+            const bookedSlots = [];
+            for (let i = 0; i < 3; i++) {
+                bookedSlots.push(timeSlots[Math.floor(Math.random() * timeSlots.length)]);
+            }
+            
+            timeSlots.forEach(time => {
+                const isBooked = bookedSlots.includes(time);
+                const col = document.createElement('div');
+                col.className = 'col-6 col-md-4 col-lg-3';
+                
+                col.innerHTML = `
+                    <div class="time-slot ${isBooked ? 'disabled' : ''}" 
+                         onclick="${isBooked ? '' : `selectTime('${time}')`}">
+                        ${time}
+                    </div>
+                `;
+                
+                container.appendChild(col);
+            });
+        }
+        
+        function selectTime(time) {
+            // Снимаем выделение
+            document.querySelectorAll('.time-slot').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            // Выделяем выбранное
+            event.target.classList.add('selected');
+            
+            // Сохраняем
+            bookingData.time = time;
+            
+            // Активируем кнопку
+            document.getElementById('nextToStep3').disabled = false;
+            
+            // Обновляем сводку
+            updateSummary();
+        }
+        
+        // ===== ИНФОРМАЦИЯ =====
+        function updateServiceInfo() {
+            if (bookingData.service) {
+                document.getElementById('selectedServiceInfo').textContent = bookingData.service;
+                document.getElementById('selectedPriceInfo').textContent = bookingData.price + ' ₽';
+            }
+        }
+        
+        function updateSummary() {
+            const summaryEl = document.getElementById('bookingSummary');
+            
+            if (bookingData.service && bookingData.date && bookingData.time && bookingData.price) {
+                summaryEl.style.display = 'block';
+                
+                // Форматируем дату
+                const dateObj = new Date(bookingData.date);
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                const formattedDate = dateObj.toLocaleDateString('ru-RU', options);
+                
+                document.getElementById('summaryService').textContent = bookingData.service;
+                document.getElementById('summaryDate').textContent = formattedDate;
+                document.getElementById('summaryTime').textContent = bookingData.time;
+                document.getElementById('summaryPrice').textContent = bookingData.price + ' ₽';
+            } else {
+                summaryEl.style.display = 'none';
+            }
+        }
+        
+        // ===== ОТПРАВКА ЗАПИСИ =====
+        async function submitBooking() {
+            console.log('Начинаем запись...');
+            
+            // Собираем данные
+            const clientName = document.getElementById('clientName').value.trim();
+            const clientPhone = document.getElementById('clientPhone').value;
+            const clientEmail = document.getElementById('clientEmail').value.trim();
+            const comment = document.getElementById('clientComment').value.trim();
+            
+            // ВАЛИДАЦИЯ
+            if (!clientName) {
+                alert('Введите ФИО');
+                return;
+            }
+            
+            if (!clientPhone || clientPhone.replace(/\D/g, '').length < 11) {
+                alert('Введите корректный телефон');
+                return;
+            }
+            
+            if (!bookingData.service) {
+                alert('Выберите услугу');
+                return;
+            }
+            
+            if (!bookingData.date || !bookingData.time) {
+                alert('Выберите дату и время');
+                return;
+            }
+            
+            // Подготовка данных
+            const cleanPhone = clientPhone.replace(/\D/g, '');
+            
+            const appointment = {
+                // Данные клиента
+                clientName: clientName,
+                phone: cleanPhone,
+                email: clientEmail,
+                
+                // Данные услуги
+                service: bookingData.service,
+                price: parseInt(bookingData.price),
+                appointment_date: bookingData.date,
+                appointment_time: bookingData.time,
+                
+                // Системные данные
+                type: 'client',
+                status: 'pending',
+                comment: comment,
+                created_at: new Date().toISOString(),
+                
+                // Для администратора
+                admin_viewed: false,
+                source: 'online_booking'
+            };
+            
+            console.log('Отправляем запись:', appointment);
+            
+            // Показываем загрузку
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Отправка...';
+            submitBtn.disabled = true;
+            
+            try {
+                // Сохраняем в Firebase
+                const docRef = await db.collection('appointments').add(appointment);
+                console.log('✅ Запись сохранена, ID:', docRef.id);
+                
+                // Сохраняем ID
+                bookingData.id = docRef.id;
+                bookingData.clientName = clientName;
+                bookingData.clientPhone = clientPhone;
+                
+                // Показываем подтверждение
+                showConfirmation();
+                
+                // Переходим к шагу 4
+                nextStep(3);
+                
+            } catch (error) {
+                console.error('❌ Ошибка:', error);
+                alert('Ошибка при сохранении: ' + error.message);
+                
+                // Восстанавливаем кнопку
+                submitBtn.innerHTML = '✅ Записаться';
+                submitBtn.disabled = false;
+            }
+        }
+        
+        // ===== ПОДТВЕРЖДЕНИЕ =====
+        function showConfirmation() {
+            // Форматируем дату
+            const dateObj = new Date(bookingData.date);
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const formattedDate = dateObj.toLocaleDateString('ru-RU', options);
+            
+            // Заполняем данные
+            document.getElementById('confirmName').textContent = bookingData.clientName;
+            document.getElementById('confirmPhone').textContent = bookingData.clientPhone;
+            document.getElementById('confirmService').textContent = bookingData.service;
+            document.getElementById('confirmDateTime').textContent = `${formattedDate} в ${bookingData.time}`;
+            document.getElementById('confirmPrice').textContent = bookingData.price + ' ₽';
+            document.getElementById('confirmId').textContent = bookingData.id ? bookingData.id.substring(0, 8).toUpperCase() : 'DEMO';
+        }
+        
+        // ===== НОВАЯ ЗАПИСЬ =====
+        function newBooking() {
+            // Сбрасываем данные
+            bookingData = {
+                service: null,
+                price: null,
+                date: null,
+                time: null,
+                id: null
+            };
+            
+            // Сбрасываем форму
+            document.getElementById('clientName').value = '';
+            document.getElementById('clientPhone').value = '';
+            document.getElementById('clientEmail').value = '';
+            document.getElementById('clientComment').value = '';
+            
+            // Сбрасываем выбор
+            document.querySelectorAll('.service-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            document.querySelectorAll('.time-slot').forEach(slot => {
+                slot.classList.remove('selected');
+            });
+            
+            // Сбрасываем кнопку
+            document.getElementById('nextToStep3').disabled = true;
+            
+            // Начинаем с шага 1
+            document.querySelectorAll('[id$="Content"]').forEach(el => {
+                el.style.display = 'none';
+            });
+            document.getElementById('step1Content').style.display = 'block';
+            updateStepIndicator(1);
+            
+            // Восстанавливаем кнопку отправки
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerHTML = '✅ Записаться';
+            submitBtn.disabled = false;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет парикмахера</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        body {
+            background: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background: white;
+            border-bottom: 1px solid #eee;
+            padding: 1rem 1.5rem;
+        }
+        
+        .nav-tabs .nav-link {
+            border: none;
+            color: #6c757d;
+            font-weight: 500;
+            padding: 0.5rem 1.5rem;
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: #0d6efd;
+            border-bottom: 3px solid #0d6efd;
+            background: transparent;
+        }
+        
+        .table th {
+            border-top: none;
+            font-weight: 600;
+            color: #495057;
+            background: #f8f9fa;
+        }
+        
+        .badge {
+            padding: 5px 10px;
+            font-weight: 500;
+        }
+        
+        .btn-sm {
+            padding: 3px 8px;
+            font-size: 12px;
+        }
+        
+        .search-box {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .table-responsive {
+                font-size: 14px;
+            }
+            
+            .btn {
+                padding: 5px 8px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="dashboard.html">
+                <span>💈</span> Панель управления
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="nav-link" id="userEmail"></span>
+                <a class="nav-link" href="add.html" style="color: #0d6efd;">➕ Новая запись</a>
+                <a class="nav-link" href="booking.html" style="color: #20c997;">🌐 Онлайн-запись</a>
+                <button class="btn btn-outline-light btn-sm" onclick="logout()">Выйти</button>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container mt-4">
+        <!-- Уведомления -->
+        <div id="alerts"></div>
+        
+        <h2 class="mb-4">📋 Управление записями</h2>
+        
+        <!-- Поиск и фильтры -->
+        <div class="search-box">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Поиск по имени...">
+                </div>
+                <div class="col-md-3">
+                    <input type="date" id="dateFilter" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <select id="statusFilter" class="form-control">
+                        <option value="">Все статусы</option>
+                        <option value="pending">Ожидание</option>
+                        <option value="confirmed">Подтверждено</option>
+                        <option value="completed">Выполнено</option>
+                        <option value="cancelled">Отменено</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" onclick="loadAppointments()">🔍 Поиск</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Вкладки -->
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="myTab">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="all-tab" onclick="showTab('all')">
+                            Все записи
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="admin-tab" onclick="showTab('admin')">
+                            👨‍💼 Мои записи
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="client-tab" onclick="showTab('client')">
+                            🌐 Онлайн-записи
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <!-- Все записи -->
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="all-tab-content">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Клиент</th>
+                                        <th>Телефон</th>
+                                        <th>Дата</th>
+                                        <th>Время</th>
+                                        <th>Услуга</th>
+                                        <th>Цена</th>
+                                        <th>Статус</th>
+                                        <th>Тип</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="allAppointmentsTable">
+                                    <!-- Все записи появятся здесь -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Записи администратора -->
+                    <div class="tab-pane fade" id="admin-tab-content">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Клиент</th>
+                                        <th>Телефон</th>
+                                        <th>Дата</th>
+                                        <th>Время</th>
+                                        <th>Услуга</th>
+                                        <th>Цена</th>
+                                        <th>Статус</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminAppointmentsTable">
+                                    <!-- Записи администратора -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Онлайн-записи клиентов -->
+                    <div class="tab-pane fade" id="client-tab-content">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Клиент</th>
+                                        <th>Телефон</th>
+                                        <th>Дата</th>
+                                        <th>Время</th>
+                                        <th>Услуга</th>
+                                        <th>Статус</th>
+                                        <th>Записано</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="clientAppointmentsTable">
+                                    <!-- Онлайн-записи клиентов -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Статистика -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card text-white bg-primary">
+                    <div class="card-body">
+                        <h5 class="card-title">Всего записей</h5>
+                        <h2 id="totalCount" class="card-text">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-warning">
+                    <div class="card-body">
+                        <h5 class="card-title">Ожидание</h5>
+                        <h2 id="pendingCount" class="card-text">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success">
+                    <div class="card-body">
+                        <h5 class="card-title">Подтверждено</h5>
+                        <h2 id="confirmedCount" class="card-text">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-info">
+                    <div class="card-body">
+                        <h5 class="card-title">Онлайн-записи</h5>
+                        <h2 id="onlineCount" class="card-text">0</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Скрипты -->
+    <script>
+        // ===== КОНФИГУРАЦИЯ FIREBASE =====
+        const firebaseConfig = {
+            apiKey: "AIzaSyDwXOEGv2GBkeWggfhcBnfKQWnHDVeI890",
+            authDomain: "barber-salon-cucher.firebaseapp.com",
+            projectId: "barber-salon-cucher",
+            storageBucket: "barber-salon-cucher.firebasestorage.app",
+            messagingSenderId: "337468108878",
+            appId: "1:337468108878:web:0fbcb5f537d891cd2ed31f"
+        };
+        
+        // Инициализация Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
+        // ===== ПЕРЕМЕННЫЕ =====
+        let currentTab = 'all';
+        let currentUserId = null;
+        
+        // ===== ПРОВЕРКА АВТОРИЗАЦИИ =====
+        auth.onAuthStateChanged(user => {
+            if (!user) {
+                window.location.href = 'index.html';
+            } else {
+                currentUserId = user.uid;
+                document.getElementById('userEmail').textContent = user.email;
+                
+                // Загружаем записи
+                loadAppointments();
+                
+                // Проверяем новые онлайн-записи
+                checkNewOnlineBookings();
+            }
+        });
+        
+        // ===== ЗАГРУЗКА ВСЕХ ЗАПИСЕЙ =====
+        async function loadAppointments() {
+            console.log('Загрузка записей...');
+            
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const dateFilter = document.getElementById('dateFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            try {
+                // Загружаем ВСЕ записи
+                const snapshot = await db.collection('appointments')
+                    .orderBy('created_at', 'desc')
+                    .get();
+                
+                console.log('Найдено записей:', snapshot.size);
+                
+                // Счетчики
+                let total = 0;
+                let pending = 0;
+                let confirmed = 0;
+                let online = 0;
+                
+                // Подготовка данных
+                const allAppointments = [];
+                const adminAppointments = [];
+                const clientAppointments = [];
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const id = doc.id;
+                    
+                    // Приводим поля к единому формату
+                    const appointment = {
+                        id: id,
+                        clientName: data.clientName || 'Не указано',
+                        phone: data.phone || '',
+                        date: data.appointment_date || data.date || '',
+                        time: data.appointment_time || data.time || '',
+                        service: data.service || 'Не указано',
+                        price: data.price || 0,
+                        status: data.status || 'pending',
+                        type: data.type || 'admin',
+                        createdAt: data.created_at || '',
+                        userId: data.user_id || null
+                    };
+                    
+                    // Фильтрация
+                    let include = true;
+                    
+                    if (search && !appointment.clientName.toLowerCase().includes(search)) {
+                        include = false;
+                    }
+                    
+                    if (dateFilter && appointment.date !== dateFilter) {
+                        include = false;
+                    }
+                    
+                    if (statusFilter && appointment.status !== statusFilter) {
+                        include = false;
+                    }
+                    
+                    if (include) {
+                        // Добавляем в общий список
+                        allAppointments.push(appointment);
+                        total++;
+                        
+                        // Счетчики статусов
+                        if (appointment.status === 'pending') pending++;
+                        if (appointment.status === 'confirmed') confirmed++;
+                        if (appointment.type === 'client') online++;
+                        
+                        // Разделяем по типам
+                        if (appointment.type === 'admin') {
+                            adminAppointments.push(appointment);
+                        } else if (appointment.type === 'client') {
+                            clientAppointments.push(appointment);
+                        }
+                    }
+                });
+                
+                // Обновляем таблицы
+                renderTable('allAppointmentsTable', allAppointments);
+                renderTable('adminAppointmentsTable', adminAppointments);
+                renderTable('clientAppointmentsTable', clientAppointments);
+                
+                // Обновляем счетчики
+                document.getElementById('totalCount').textContent = total;
+                document.getElementById('pendingCount').textContent = pending;
+                document.getElementById('confirmedCount').textContent = confirmed;
+                document.getElementById('onlineCount').textContent = online;
+                
+                console.log('Записи загружены:', { total, pending, confirmed, online });
+                
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
+                showAlert('Ошибка загрузки записей: ' + error.message, 'danger');
+            }
+        }
+        
+        // ===== ОТОБРАЖЕНИЕ ТАБЛИЦЫ =====
+        function renderTable(tableId, appointments) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            
+            if (appointments.length === 0) {
+                table.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">
+                            <div class="py-3">
+                                <div style="font-size: 3rem;">📭</div>
+                                <p class="mt-2">Нет записей</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            let html = '';
+            
+            appointments.forEach(appointment => {
+                // Определяем иконку типа
+                const typeIcon = appointment.type === 'client' ? '🌐' : '👨‍💼';
+                const typeText = appointment.type === 'client' ? 'Онлайн' : 'Админ';
+                
+                // Определяем цвет статуса
+                let statusClass = 'secondary';
+                let statusText = 'Не указан';
+                
+                switch (appointment.status) {
+                    case 'pending':
+                        statusClass = 'warning';
+                        statusText = 'Ожидание';
+                        break;
+                    case 'confirmed':
+                        statusClass = 'success';
+                        statusText = 'Подтверждено';
+                        break;
+                    case 'completed':
+                        statusClass = 'info';
+                        statusText = 'Выполнено';
+                        break;
+                    case 'cancelled':
+                        statusClass = 'danger';
+                        statusText = 'Отменено';
+                        break;
+                }
+                
+                // Форматируем телефон
+                const phone = formatPhone(appointment.phone);
+                
+                // Форматируем дату создания
+                let createdText = '';
+                if (appointment.createdAt) {
+                    const createdDate = new Date(appointment.createdAt);
+                    createdText = createdDate.toLocaleDateString('ru-RU');
+                }
+                
+                // Действия в зависимости от типа записи
+                let actions = '';
+                
+                if (appointment.type === 'client') {
+                    // Для онлайн-записей
+                    actions = `
+                        <button onclick="changeStatus('${appointment.id}', 'confirmed')" 
+                                class="btn btn-sm btn-success" title="Подтвердить">
+                            ✅
+                        </button>
+                        <button onclick="changeStatus('${appointment.id}', 'completed')" 
+                                class="btn btn-sm btn-info" title="Выполнено">
+                            ✓
+                        </button>
+                        <button onclick="changeStatus('${appointment.id}', 'cancelled')" 
+                                class="btn btn-sm btn-danger" title="Отменить">
+                            ❌
+                        </button>
+                    `;
+                } else {
+                    // Для админских записей
+                    actions = `
+                        <a href="edit.html?id=${appointment.id}" 
+                           class="btn btn-sm btn-warning" title="Редактировать">
+                            ✏️
+                        </a>
+                        <button onclick="deleteAppointment('${appointment.id}')" 
+                                class="btn btn-sm btn-danger" title="Удалить">
+                            🗑️
+                        </button>
+                    `;
+                }
+                
+                // Строка таблицы
+                html += `
+                    <tr>
+                        <td>
+                            ${escapeHtml(appointment.clientName)}
+                            <br>
+                            <small class="text-muted">${typeIcon} ${typeText}</small>
+                        </td>
+                        <td>${phone}</td>
+                        <td>${appointment.date}</td>
+                        <td>${appointment.time}</td>
+                        <td>${escapeHtml(appointment.service)}</td>
+                        ${tableId === 'clientAppointmentsTable' ? '' : `<td>${appointment.price} ₽</td>`}
+                        <td>
+                            <span class="badge bg-${statusClass}">${statusText}</span>
+                        </td>
+                        ${tableId === 'clientAppointmentsTable' ? 
+                          `<td><small>${createdText}</small></td>` : 
+                          `<td><small>${typeText}</small></td>`}
+                        <td>
+                            ${actions}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            table.innerHTML = html;
+        }
+        
+        // ===== СМЕНА СТАТУСА =====
+        async function changeStatus(id, newStatus) {
+            const statusTexts = {
+                'confirmed': 'подтверждена',
+                'completed': 'отмечена как выполненная',
+                'cancelled': 'отменена'
+            };
+            
+            const text = statusTexts[newStatus] || 'изменена';
+            
+            if (!confirm(`Изменить статус записи на "${text}"?`)) return;
+            
+            try {
+                await db.collection('appointments').doc(id).update({
+                    status: newStatus,
+                    updated_at: new Date().toISOString()
+                });
+                
+                showAlert(`✅ Статус записи ${text}`, 'success');
+                loadAppointments();
+                
+            } catch (error) {
+                console.error('Ошибка изменения статуса:', error);
+                showAlert('❌ Ошибка: ' + error.message, 'danger');
+            }
+        }
+        
+        // ===== УДАЛЕНИЕ ЗАПИСИ =====
+        async function deleteAppointment(id) {
+            if (!confirm('Удалить эту запись? Это действие нельзя отменить.')) return;
+            
+            try {
+                await db.collection('appointments').doc(id).delete();
+                showAlert('✅ Запись удалена', 'success');
+                loadAppointments();
+                
+            } catch (error) {
+                console.error('Ошибка удаления:', error);
+                showAlert('❌ Ошибка удаления: ' + error.message, 'danger');
+            }
+        }
+        
+        // ===== ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК =====
+        function showTab(tabName) {
+            currentTab = tabName;
+            
+            // Сбрасываем активные вкладки
+            document.querySelectorAll('#myTab .nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.classList.remove('show', 'active');
+            });
+            
+            // Активируем выбранную вкладку
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            document.getElementById(`${tabName}-tab-content`).classList.add('show', 'active');
+            
+            // Если это вкладка онлайн-записей, проверяем новые
+            if (tabName === 'client') {
+                markOnlineAsViewed();
+            }
+        }
+        
+        // ===== ПРОВЕРКА НОВЫХ ОНЛАЙН-ЗАПИСЕЙ =====
+        async function checkNewOnlineBookings() {
+            try {
+                // Ищем непросмотренные онлайн-записи
+                const snapshot = await db.collection('appointments')
+                    .where('type', '==', 'client')
+                    .where('admin_viewed', '==', false)
+                    .get();
+                
+                if (!snapshot.empty) {
+                    showNotification(`🌐 У вас ${snapshot.size} новых онлайн-записей!`);
+                }
+                
+            } catch (error) {
+                console.error('Ошибка проверки новых записей:', error);
+            }
+        }
+        
+        async function markOnlineAsViewed() {
+            try {
+                // Помечаем все онлайн-записи как просмотренные
+                const snapshot = await db.collection('appointments')
+                    .where('type', '==', 'client')
+                    .where('admin_viewed', '==', false)
+                    .get();
+                
+                const batch = db.batch();
+                
+                snapshot.forEach(doc => {
+                    batch.update(doc.ref, { admin_viewed: true });
+                });
+                
+                if (!snapshot.empty) {
+                    await batch.commit();
+                    console.log('Онлайн-записи помечены как просмотренные');
+                }
+                
+            } catch (error) {
+                console.error('Ошибка обновления статуса:', error);
+            }
+        }
+        
+        // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
+        function formatPhone(phone) {
+            if (!phone) return 'Не указан';
+            if (phone.length === 11) {
+                return `+${phone[0]} (${phone.substring(1, 4)}) ${phone.substring(4, 7)}-${phone.substring(7, 9)}-${phone.substring(9, 11)}`;
+            }
+            return phone;
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function showAlert(message, type) {
+            const alertsDiv = document.getElementById('alerts');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show`;
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            alertsDiv.prepend(alert);
+            
+            // Автоматически скрыть через 5 секунд
+            setTimeout(() => {
+                if (alert.parentElement) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+        
+        function showNotification(message) {
+            // Создаем уведомление
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-info alert-dismissible fade show';
+            notification.innerHTML = `
+                <strong>${message}</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.querySelector('.container').prepend(notification);
+            
+            // Автоматически скрыть через 10 секунд
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 10000);
+        }
+        
+        function logout() {
+            if (confirm('Выйти из системы?')) {
+                auth.signOut().then(() => {
+                    window.location.href = 'index.html';
+                });
+            }
+        }
+        
+        // Автоматическая загрузка каждые 30 секунд
+        setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                loadAppointments();
+            }
+        }, 30000);
+        
+        // Загружаем записи при фокусе на вкладке
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                loadAppointments();
+            }
+        });
+    </script>
+</body>
+</html>

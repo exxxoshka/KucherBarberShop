@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактировать запись</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Наши скрипты -->
+    <script src="firebase-config.js"></script>
+    
+    <style>
+        body {
+            background: #f8f9fa;
+        }
+        .form-container {
+            max-width: 800px;
+            margin: 30px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="dashboard.html">← Назад к записям</a>
+            <span class="navbar-text">Редактирование записи</span>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="form-container">
+            <h2 class="mb-4">✏️ Редактировать запись</h2>
+            
+            <form id="editForm" onsubmit="return false;">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">ФИО клиента *</label>
+                        <input type="text" id="clientName" class="form-control" required placeholder="Иванов Иван Иванович">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Телефон *</label>
+                        <input type="tel" id="phone" class="form-control" required placeholder="+7 (999) 123-45-67">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Дата записи *</label>
+                        <input type="date" id="date" class="form-control" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Время *</label>
+                        <input type="time" id="time" class="form-control" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Услуга *</label>
+                        <select id="service" class="form-control" required>
+                            <option value="">Выберите услугу</option>
+                            <option value="Мужская стрижка">Мужская стрижка</option>
+                            <option value="Женская стрижка">Женская стрижка</option>
+                            <option value="Бритье">Бритье</option>
+                            <option value="Окрашивание">Окрашивание</option>
+                            <option value="Укладка">Укладка</option>
+                            <option value="Стрижка+Бритье">Стрижка+Бритье</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Цена (₽) *</label>
+                        <input type="number" id="price" class="form-control" required min="0" value="1000">
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="d-flex gap-3">
+                            <button type="submit" class="btn btn-warning" onclick="updateAppointment()">💾 Сохранить изменения</button>
+                            <a href="dashboard.html" class="btn btn-secondary">❌ Отмена</a>
+                            <button type="button" class="btn btn-danger ms-auto" onclick="deleteCurrentAppointment()">🗑️ Удалить запись</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+            
+            <div id="message" class="mt-3"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Получаем ID записи из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const appointmentId = urlParams.get('id');
+        
+        let currentAppointmentId = appointmentId;
+        
+        // Маска телефона
+        document.getElementById('phone').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 1) {
+                value = '+7 (' + value.substring(1, 4) + ') ' + 
+                        value.substring(4, 7) + '-' + 
+                        value.substring(7, 9) + '-' + 
+                        value.substring(9, 11);
+            }
+            e.target.value = value.substring(0, 18);
+        });
+        
+        // Проверка авторизации и загрузка данных
+        auth.onAuthStateChanged(user => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            if (!appointmentId) {
+                showMessage('Ошибка: не указан ID записи', 'danger');
+                return;
+            }
+            
+            // Загружаем данные записи
+            loadAppointmentData(appointmentId, user.uid);
+        });
+        
+        // Загрузить данные записи
+        function loadAppointmentData(id, userId) {
+            db.collection('appointments').doc(id).get()
+                .then(doc => {
+                    if (!doc.exists) {
+                        showMessage('Запись не найдена', 'danger');
+                        return;
+                    }
+                    
+                    const data = doc.data();
+                    
+                    // Проверяем, что запись принадлежит текущему пользователю
+                    if (data.userId !== userId) {
+                        showMessage('У вас нет прав для редактирования этой записи', 'danger');
+                        setTimeout(() => {
+                            window.location.href = 'dashboard.html';
+                        }, 2000);
+                        return;
+                    }
+                    
+                    // Заполняем форму данными
+                    document.getElementById('clientName').value = data.clientName || '';
+                    
+                    // Форматируем телефон
+                    let phone = data.phone || '';
+                    if (phone && phone.length === 11) {
+                        phone = '+7 (' + phone.substring(1, 4) + ') ' + 
+                                phone.substring(4, 7) + '-' + 
+                                phone.substring(7, 9) + '-' + 
+                                phone.substring(9, 11);
+                    }
+                    document.getElementById('phone').value = phone;
+                    
+                    document.getElementById('date').value = data.date || '';
+                    document.getElementById('time').value = data.time || '';
+                    document.getElementById('service').value = data.service || '';
+                    document.getElementById('price').value = data.price || 1000;
+                    
+                })
+                .catch(error => {
+                    showMessage('Ошибка загрузки: ' + error.message, 'danger');
+                });
+        }
+        
+        // Обновить запись
+        function updateAppointment() {
+            const user = auth.currentUser;
+            if (!user || !currentAppointmentId) return;
+            
+            const clientName = document.getElementById('clientName').value.trim();
+            const phone = document.getElementById('phone').value;
+            const date = document.getElementById('date').value;
+            const time = document.getElementById('time').value;
+            const service = document.getElementById('service').value;
+            const price = parseInt(document.getElementById('price').value);
+            
+            // Валидация
+            if (!clientName || !phone || !date || !time || !service || !price) {
+                showMessage('Заполните все поля!', 'danger');
+                return;
+            }
+            
+            // Очистка телефона от форматирования
+            const cleanPhone = phone.replace(/\D/g, '');
+            
+            const updatedData = {
+                clientName: clientName,
+                phone: cleanPhone,
+                date: date,
+                time: time,
+                service: service,
+                price: price,
+                updatedAt: new Date().toISOString()
+            };
+            
+            db.collection('appointments').doc(currentAppointmentId).update(updatedData)
+                .then(() => {
+                    showMessage('✅ Запись успешно обновлена!', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1500);
+                })
+                .catch(error => {
+                    showMessage('❌ Ошибка: ' + error.message, 'danger');
+                });
+        }
+        
+        // Удалить текущую запись
+        function deleteCurrentAppointment() {
+            if (!currentAppointmentId) return;
+            
+            if (confirm('Вы уверены, что хотите удалить эту запись?')) {
+                db.collection('appointments').doc(currentAppointmentId).delete()
+                    .then(() => {
+                        showMessage('✅ Запись удалена!', 'success');
+                        setTimeout(() => {
+                            window.location.href = 'dashboard.html';
+                        }, 1500);
+                    })
+                    .catch(error => {
+                        showMessage('❌ Ошибка удаления: ' + error.message, 'danger');
+                    });
+            }
+        }
+        
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show">
+                    ${text}
+                    <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+                </div>
+            `;
+        }
+        
+        // Установим завтрашнюю дату по умолчанию, если нет данных
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        if (!document.getElementById('date').value) {
+            document.getElementById('date').value = tomorrow.toISOString().split('T')[0];
+        }
+    </script>
+</body>
+</html>
