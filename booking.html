@@ -98,6 +98,16 @@
             box-shadow: 0 8px 15px rgba(106, 17, 203, 0.3);
         }
         
+        .btn-outline-secondary {
+            border-color: #6c757d;
+            color: #6c757d;
+        }
+        
+        .btn-outline-secondary:hover {
+            background: #6c757d;
+            color: white;
+        }
+        
         .confirmation-box {
             background: linear-gradient(135deg, #20c997, #28a745);
             color: white;
@@ -148,6 +158,35 @@
             z-index: 1;
         }
         
+        .nav-buttons {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        
+        .check-records-btn {
+            background: linear-gradient(135deg, #20c997, #28a745);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .check-records-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(32, 201, 151, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
         @media (max-width: 768px) {
             .hero-section {
                 padding: 40px 0;
@@ -166,6 +205,10 @@
                 height: 35px;
                 font-size: 14px;
             }
+            
+            .nav-buttons {
+                padding: 10px;
+            }
         }
     </style>
 </head>
@@ -174,11 +217,15 @@
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
         <div class="container">
             <a class="navbar-brand" href="booking.html" style="color: var(--primary);">
-                <span>💈</span> BarberShop Kucher
+                <span>💈</span> BarberShop
             </a>
            
         </div>
     </nav>
+
+    <!-- Блок с кнопками навигации -->
+    
+    </div>
 
     <!-- Герой-секция -->
     <section class="hero-section">
@@ -239,8 +286,8 @@
             
             <div class="text-center mt-4">
                 <button class="btn btn-primary btn-lg" onclick="nextStep(1)">
-    Далее → Выбор времени
-</button>
+                    Далее → Выбор времени
+                </button>
             </div>
         </div>
 
@@ -271,12 +318,12 @@
             </div>
             
             <div class="d-flex justify-content-between">
-                <button class="btn btn-outline-secondary" onclick="nextStep(0)"> <!-- меняем на 0 -->
-    ← Назад
-</button>
-<button class="btn btn-primary" onclick="nextStep(2)" id="nextToStep3" disabled>
-    Далее → Ваши данные
-</button>
+                <button class="btn btn-outline-secondary" onclick="prevStep(2)">
+                    ← Назад
+                </button>
+                <button class="btn btn-primary" id="nextToStep3" disabled>
+                    Далее → Ваши данные
+                </button>
             </div>
         </div>
 
@@ -321,10 +368,9 @@
             </div>
             
             <div class="d-flex justify-content-between mt-4">
-                <button class="btn btn-outline-secondary" onclick="nextStep(1)"> <!-- меняем на 1 -->
-    ← Назад
-</button>
-
+                <button class="btn btn-outline-secondary" onclick="prevStep(3)">
+                    ← Назад
+                </button>
                 <button class="btn btn-primary" onclick="submitBooking()" id="submitBtn">
                     ✅ Записаться
                 </button>
@@ -357,6 +403,25 @@
                 <button class="btn btn-primary" onclick="newBooking()">
                     🆕 Новая запись
                 </button>
+                <a href="client-view.html" class="btn btn-success ms-2">
+                    🔍 Проверить все мои записи
+                </a>
+            </div>
+        </div>
+        
+        <!-- Блок с информацией -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5>🔍 Уже записывались к нам?</h5>
+                <p class="mb-3">Вы можете проверить статус своих записей в любое время.</p>
+                <div class="d-grid gap-2">
+                    <a href="client-view.html" class="btn btn-outline-success">
+                        🔍 Проверить свои записи по номеру телефона
+                    </a>
+                </div>
+                <small class="text-muted mt-2 d-block">
+                    Вам понадобится номер телефона, который вы указывали при записи
+                </small>
             </div>
         </div>
     </div>
@@ -452,64 +517,38 @@
         });
         
         // ===== ФУНКЦИИ ШАГОВ =====
-        window.nextStep = function(currentStep) {
-    // Проверки
-    if (currentStep === 1 && !bookingData.service) {
-        alert('Выберите услугу!');
-        return;
-    }
-    
-    if (currentStep === 2 && !bookingData.time) {
-        alert('Выберите время!');
-        return;
-    }
-    
-    // Скрыть все шаги
-    for (let i = 1; i <= 4; i++) {
-        const stepEl = document.getElementById(`step${i}Content`);
-        if (stepEl) {
-            stepEl.style.display = 'none';
-        }
-    }
-    
-    // Показать следующий шаг
-    const nextStepNum = currentStep + 1;
-    const nextEl = document.getElementById(`step${nextStepNum}Content`);
-    if (nextEl) {
-        nextEl.style.display = 'block';
-    }
-    
-    // Обновить индикатор
-    for (let i = 1; i <= 4; i++) {
-        const indicator = document.getElementById(`step${i}`);
-        if (indicator) {
-            indicator.classList.remove('active', 'completed');
-            if (i < nextStepNum) {
-                indicator.classList.add('completed');
-            } else if (i === nextStepNum) {
-                indicator.classList.add('active');
+        function nextStep(currentStep) {
+            // Проверка перед переходом
+            if (currentStep === 1 && !bookingData.service) {
+                alert('Выберите услугу!');
+                return;
+            }
+            
+            if (currentStep === 2 && !bookingData.time) {
+                alert('Выберите время!');
+                return;
+            }
+            
+            // Скрываем все шаги
+            document.querySelectorAll('[id$="Content"]').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // Показываем следующий шаг
+            const nextStep = currentStep + 1;
+            document.getElementById(`step${nextStep}Content`).style.display = 'block';
+            
+            // Обновляем индикатор
+            updateStepIndicator(nextStep);
+            
+            // Обновляем информацию
+            if (nextStep === 2) {
+                updateServiceInfo();
+                generateTimeSlots();
+            } else if (nextStep === 3) {
+                updateSummary();
             }
         }
-    }
-    
-    // Дополнительные действия
-    if (nextStepNum === 2) {
-        // Обновить информацию об услуге
-        const serviceInfo = document.getElementById('selectedServiceInfo');
-        const priceInfo = document.getElementById('selectedPriceInfo');
-        if (serviceInfo && priceInfo) {
-            serviceInfo.textContent = bookingData.service || 'Не выбрано';
-            priceInfo.textContent = bookingData.price ? bookingData.price + ' ₽' : '';
-        }
-        
-        // Обновить слоты времени
-        generateTimeSlots();
-    }
-    
-    if (nextStepNum === 3) {
-        updateSummary();
-    }
-};
         
         function prevStep(currentStep) {
             const prevStep = currentStep - 1;
@@ -763,5 +802,191 @@
             submitBtn.disabled = false;
         }
     </script>
+    <script>
+    // Горячая клавиша Alt + J для перехода в админ-панель
+    document.addEventListener('keydown', function(event) {
+        // Проверяем Alt + J или Alt + Й (русская раскладка)
+        if (event.altKey && (event.key === 'j' || event.key === 'J' || event.key === 'й' || event.key === 'Й')) {
+            event.preventDefault(); // Отменяем стандартное поведение
+            
+            // Показываем уведомление
+            showKeyboardNotification('Переход в админ-панель...');
+            
+            // Переходим на index.html через 0.5 секунды
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 500);
+        }
+        
+        // Alt + B для перехода на booking.html (запись клиента)
+        if (event.altKey && (event.key === 'b' || event.key === 'B' || event.key === 'и' || event.key === 'И')) {
+            event.preventDefault();
+            showKeyboardNotification('Переход к онлайн-записи...');
+            setTimeout(() => {
+                window.location.href = 'booking.html';
+            }, 500);
+        }
+        
+        // Alt + C для перехода на client-view.html (проверка записей)
+        if (event.altKey && (event.key === 'c' || event.key === 'C' || event.key === 'с' || event.key === 'С')) {
+            event.preventDefault();
+            showKeyboardNotification('Переход к проверке записей...');
+            setTimeout(() => {
+                window.location.href = 'client-view.html';
+            }, 500);
+        }
+    });
+    
+    // Функция показа уведомления
+    function showKeyboardNotification(message) {
+        // Удаляем предыдущее уведомление если есть
+        const oldNotification = document.getElementById('keyboard-notification');
+        if (oldNotification) {
+            oldNotification.remove();
+        }
+        
+        // Создаем новое уведомление
+        const notification = document.createElement('div');
+        notification.id = 'keyboard-notification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 9999;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-weight: 600;
+            animation: slideIn 0.3s ease-out, fadeOut 0.3s ease-in 1.7s forwards;
+        `;
+        
+        notification.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.2em;">🚀</span>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        // Добавляем стили для анимации
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes fadeOut {
+                from {
+                    opacity: 1;
+                }
+                to {
+                    opacity: 0;
+                }
+            }
+        `;
+        
+        document.head.appendChild(style);
+        document.body.appendChild(notification);
+        
+        // Автоматически удаляем через 2 секунды
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 2000);
+    }
+    
+    // Показываем подсказку о горячих клавишах при загрузке страницы
+    window.addEventListener('load', function() {
+        setTimeout(() => {
+            showKeyboardHint();
+        }, 2000);
+    });
+    
+    function showKeyboardHint() {
+        // Проверяем, не показывали ли уже подсказку
+        if (localStorage.getItem('keyboardHintShown')) return;
+        
+        const hint = document.createElement('div');
+        hint.id = 'keyboard-hint';
+        hint.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            z-index: 9998;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 300px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            animation: slideUp 0.5s ease-out;
+        `;
+        
+        hint.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <strong style="color: #6a11cb;">🎮 Горячие клавиши</strong>
+                <button onclick="closeHint()" style="background: none; border: none; color: white; font-size: 1.2em; cursor: pointer;">×</button>
+            </div>
+            <div style="font-size: 0.9em;">
+                <div><kbd style="background: #6a11cb; color: white; padding: 2px 6px; border-radius: 4px;">Alt</kbd> + <kbd style="background: #2575fc; color: white; padding: 2px 6px; border-radius: 4px;">J</kbd> → Админ-панель</div>
+                <div><kbd style="background: #6a11cb; color: white; padding: 2px 6px; border-radius: 4px;">Alt</kbd> + <kbd style="background: #28a745; color: white; padding: 2px 6px; border-radius: 4px;">B</kbd> → Запись клиента</div>
+                <div><kbd style="background: #6a11cb; color: white; padding: 2px 6px; border-radius: 4px;">Alt</kbd> + <kbd style="background: #20c997; color: white; padding: 2px 6px; border-radius: 4px;">C</kbd> → Проверка записей</div>
+            </div>
+            <div style="margin-top: 10px; font-size: 0.8em; color: #aaa;">
+                Подсказка исчезнет через 10 секунд
+            </div>
+        `;
+        
+        document.body.appendChild(hint);
+        
+        // Сохраняем в localStorage что подсказку показали
+        localStorage.setItem('keyboardHintShown', 'true');
+        
+        // Автоматически скрываем через 10 секунд
+        setTimeout(() => {
+            if (hint.parentElement) {
+                hint.remove();
+            }
+        }, 10000);
+    }
+    
+    // Функция закрытия подсказки
+    window.closeHint = function() {
+        const hint = document.getElementById('keyboard-hint');
+        if (hint && hint.parentElement) {
+            hint.remove();
+        }
+    };
+    
+    // Стили для анимации подсказки
+    const hintStyle = document.createElement('style');
+    hintStyle.textContent = `
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        kbd {
+            font-family: monospace;
+            margin: 0 2px;
+        }
+    `;
+    document.head.appendChild(hintStyle);
+</script>
 </body>
 </html>
